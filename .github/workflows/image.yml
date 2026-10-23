@@ -1,0 +1,46 @@
+name: Build image (pod runtime)
+
+# Builds the Wine desktop image that appstore.yaml refers to, by digest.
+# The image contains NO MATLAB (licence): it is installed into the storage
+# volume on first start. Pull requests only build, nothing is pushed.
+on:
+  push:
+    branches: [main, dev]
+    paths: ['image/**', '.github/workflows/image.yml']
+  pull_request:
+    branches: [main, dev]
+    paths: ['image/**', '.github/workflows/image.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/dhbw-appstore-t3/apps/windows-matlab
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: image
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      - name: Digest
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "### Image digest" >> "$GITHUB_STEP_SUMMARY"
+          echo '`${{ env.IMAGE }}@${{ steps.build.outputs.digest }}`' >> "$GITHUB_STEP_SUMMARY"
