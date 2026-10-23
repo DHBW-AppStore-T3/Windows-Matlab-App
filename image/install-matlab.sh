@@ -20,7 +20,10 @@ if [ ! -f "$HOME/.vcrun-done" ]; then
   ls -l "$WINEPREFIX/drive_c/windows/system32/"vcruntime140*.dll "$WINEPREFIX/drive_c/windows/system32/"msvcp140*.dll
   touch "$HOME/.vcrun-done"
 fi
-wine "$MPM" --help 2>&1 | head -20 || true
+# Profile paths as the Windows side expects them (a missing one made winetricks see an empty %AppData%).
+mkdir -p "$WINEPREFIX/drive_c/users/wine/AppData/Roaming" "$WINEPREFIX/drive_c/users/wine/AppData/Local"
+export APPDATA='C:\users\wine\AppData\Roaming' LOCALAPPDATA='C:\users\wine\AppData\Local' USERPROFILE='C:\users\wine'
+WINEDEBUG=err+all,+loaddll,+module wine "$MPM" --help 2>&1 | grep -iE "ddux|err:|fail|not found|c0000|mwse" | head -40 || true
 wine "$MPM" install \
   --release "${MATLAB_RELEASE:-R2024b}" \
   --destination 'C:\MATLAB' \
