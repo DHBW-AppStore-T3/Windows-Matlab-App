@@ -31,7 +31,14 @@ openbox &
 
 # The VNC server is local only; websockify is the one exposed port. Password
 # protection of the page is the platform's job (ingress), not VNC's.
-x11vnc -display :0 -forever -shared -nopw -localhost -rfbport 5900 -quiet &
+# The password is the app's generated one (env VNC_PASSWORD); VNC uses its first 8 characters.
+if [ -n "${VNC_PASSWORD:-}" ]; then
+  x11vnc -storepasswd "$VNC_PASSWORD" /tmp/vncpass >/dev/null 2>&1
+  VNC_AUTH=(-rfbauth /tmp/vncpass)
+else
+  VNC_AUTH=(-nopw)
+fi
+x11vnc -display :0 -forever -shared "${VNC_AUTH[@]}" -localhost -rfbport 5900 -quiet &
 
 # Everything Wine-related runs in the background so the web page is up at once.
 (
@@ -48,5 +55,10 @@ x11vnc -display :0 -forever -shared -nopw -localhost -rfbport 5900 -quiet &
   fi
 ) &
 
+# The root filesystem is read-only: serve noVNC from /tmp with an index that connects at once.
+mkdir -p /tmp/web
+cp -rs /usr/share/novnc/. /tmp/web/ 2>/dev/null || true
+printf '%s\n' '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=vnc.html?autoconnect=true&resize=scale">' >/tmp/web/index.html
+
 # Listen on all families: the cluster is IPv6-primary.
-exec websockify --web /usr/share/novnc "[::]:8080" localhost:5900
+exec websockify --web /tmp/web "[::]:8080" localhost:5900

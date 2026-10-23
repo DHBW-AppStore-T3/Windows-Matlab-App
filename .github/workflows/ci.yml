@@ -1,0 +1,16 @@
+name: ci
+# The standard pipeline of the app registry: validate appstore.yaml, lint, build,
+# Trivy, push to ghcr.io/dhbw-appstore-t3/windows-matlab-app. No MATLAB is in the image.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+permissions: { contents: read, packages: write }
+jobs:
+  app:
+    uses: DHBW-AppStore-T3/app-registry/.github/workflows/app-ci.yml@main
+    with:
+      app-name: windows-matlab-app
+      images: '[{"suffix":"","context":"image","dockerfile":"image/Dockerfile"}]'

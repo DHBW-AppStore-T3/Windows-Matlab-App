@@ -1,0 +1,31 @@
+# App contract v2: a Windows desktop (Wine) with MATLAB, one pod per person,
+# in the browser. MATLAB is not part of the image (licence): the first start
+# installs it onto the volume with MathWorks' mpm.exe (about 30 minutes), later
+# starts open it at once. Students activate with their MathWorks account
+# (campus licence, Shibboleth).
+apiVersion: appstore/v2
+name: windows-matlab-app
+runtime: kubernetes
+scope: user
+workload:
+  containers:
+    - name: desktop
+      # Built by .github/workflows/ci.yml. After changing image/, copy the new digest here.
+      image: ghcr.io/dhbw-appstore-t3/windows-matlab-app:dev
+      expose: { port: 8080, path: / }
+      # Defaults. People can choose their own within resourceBounds when they deploy.
+      resources: { cpu: "2", memory: 4Gi, requests: { cpu: 500m, memory: 2Gi } }
+      resourceBounds:
+        cpu: { min: "1", max: "4" }
+        memory: { min: 2Gi, max: 8Gi }
+      env:
+        # Password of the browser desktop (VNC).
+        - { name: VNC_PASSWORD, from: generated-password }
+      writablePaths: [/tmp]
+  # HOME of the container: Wine prefix and MATLAB.
+  storage: { size: 20Gi, mountPath: /home/wine }
+# The installer and the MathWorks activation need the internet.
+egress: internet
+access:
+  - { type: url, template: "https://{workload}-{deployment}.{domain}" }
+  - { type: password, from: generated-password, username: "{user}" }
