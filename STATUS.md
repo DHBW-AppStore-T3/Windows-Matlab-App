@@ -27,6 +27,9 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - (ii) lokal vorbereitet, NICHT committet: appstore.yaml (Tag :dev statt Digest!), .hadolint.yaml, .github/workflows/ci.yml (ruft app-registry app-ci.yml, ersetzt image.yml), VNC-Passwort in start.sh. Danach: commit+push dev, CI abwarten, Digest in appstore.yaml, Tag v1.0.0, app-registry PR apps/windows-matlab-app.yaml.
 - PRs: backend#21 (+Fix pip-audit setuptools/filelock), worker#16 (black), frontend#40, deployment#119 (APP_MAX 4 CPU/8Gi). CI prüfen, mergen: backend, worker, deployment, frontend.
 
+- (i) ERREICHT bis Aktivierung: mpm.exe installiert MATLAB R2024b (4.6G) unter gepatchtem Wine; matlab -batch -> "License checkout failed" (erwartet); matlab -desktop zeigt MathWorks Product Activation (Login) im Desktop. Nötig: WINEDLLOVERRIDES msvcp140/vcruntime140=n,b (in Dockerfile ENV, noch nicht gebaut/deployed). Voller Funktionstest (MATLAB-Fenster nach Login) nur mit Lizenz-Account möglich.
+- app-registry PR #3 (Validator resourceBounds, Limits 4000m/8192Mi, apps/windows-matlab-app.yaml) -> muss gemergt sein, bevor Windows-Matlab-App CI grün wird (CI zieht Validator von main).
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)

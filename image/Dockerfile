@@ -41,6 +41,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=wine-build /opt/wine /opt/wine
 
+# MATLAB's libmx.dll needs std::get_new_handler, which Wine's builtin msvcp140
+# lacks; the Microsoft runtime that install-matlab.sh installs must win (n,b).
 # HOME is on the storage volume (mounted by the platform). The platform runs
 # the container as UID 1000 with a read-only root filesystem, so everything
 # that is written goes to the volume or /tmp.
@@ -49,7 +51,7 @@ ENV PATH=/opt/wine/bin:$PATH \
     WINEPREFIX=/home/wine/prefix \
     WINEARCH=win64 \
     WINEDEBUG=-all \
-    WINEDLLOVERRIDES="mscoree,mshtml,winemenubuilder.exe=" \
+    WINEDLLOVERRIDES="mscoree,mshtml,winemenubuilder.exe=;msvcp140=n,b;msvcp140_1=n,b;msvcp140_2=n,b;msvcp140_atomic_wait=n,b;msvcp140_codecvt_ids=n,b;vcruntime140=n,b;vcruntime140_1=n,b;concrt140=n,b" \
     DISPLAY=:0 \
     MATLAB_RELEASE=R2024b
 
