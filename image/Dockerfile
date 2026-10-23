@@ -5,12 +5,19 @@
 FROM docker.io/library/debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+# Debian's Wine 8.0 mishandles the C++ exceptions of MathWorks' installer, so
+# use the WineHQ stable branch.
 RUN dpkg --add-architecture i386 \
  && apt-get update \
- && apt-get install -y --no-install-recommends \
-      wine wine64 wine32 libwine winbind cabextract unzip ca-certificates curl procps \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+ && mkdir -pm755 /etc/apt/keyrings \
+ && curl -fsSL -o /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
+ && curl -fsSL -o /etc/apt/sources.list.d/winehq-bookworm.sources https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends winehq-stable winbind cabextract unzip procps \
       xvfb x11vnc openbox novnc websockify x11-utils xdotool imagemagick xterm \
       fonts-liberation fonts-dejavu-core \
+ && wine --version \
  && rm -rf /var/lib/apt/lists/*
 
 # winetricks is in Debian contrib, so take the pinned upstream script.
