@@ -37,6 +37,8 @@ jobs:
           context: image
           push: ${{ github.event_name != 'pull_request' }}
           platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: ${{ env.IMAGE }}:${{ github.sha }}
           labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
       - name: Digest
