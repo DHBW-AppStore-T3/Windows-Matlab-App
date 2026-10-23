@@ -1,0 +1,33 @@
+name: Spike (Wine + MATLAB)
+
+# Feasibility check only. Builds the image locally and NEVER pushes it:
+# the job installs MATLAB into a container, which must not leave the runner.
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths: ['image/**', 'scripts/spike.sh', '.github/workflows/spike.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  spike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+      - name: Build image
+        run: docker build -t windows-matlab:spike image
+      - name: Run spike
+        run: bash scripts/spike.sh windows-matlab:spike
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spike-out
+          path: spike-out/
+          if-no-files-found: ignore
