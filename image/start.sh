@@ -3,7 +3,11 @@
 # prefix is created on first start; MATLAB is installed in the background.
 set -euo pipefail
 
-mkdir -p "$HOME" /tmp/.X11-unix
+# The volume mount itself belongs to root (only its group is ours) and Wine
+# refuses such a HOME, so work in a directory below it that we own.
+mkdir -p /home/wine/user
+export HOME=/home/wine/user WINEPREFIX=/home/wine/user/prefix
+mkdir -p /tmp/.X11-unix
 export XDG_RUNTIME_DIR=/tmp/xdg
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 0700 "$XDG_RUNTIME_DIR"
