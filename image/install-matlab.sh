@@ -2,13 +2,15 @@
 # Installs the Windows build of MATLAB into the Wine prefix with mpm.exe.
 # No licence is needed to install; students activate with their MathWorks
 # account (campus licence, Shibboleth) when they first start MATLAB.
-set -euo pipefail
+set -euxo pipefail
+export WINEDEBUG=err+all
 
 MPM_URL="https://www.mathworks.com/mpm/win64/mpm"
 MPM="$HOME/mpm.exe"
 
 [ -f "$MPM" ] || curl -fsSL -o "$MPM" "$MPM_URL"
 
+ls -l "$MPM"; wine "$MPM" --help 2>&1 | head -20 || true
 wine "$MPM" install \
   --release "${MATLAB_RELEASE:-R2024b}" \
   --destination 'C:\MATLAB' \
