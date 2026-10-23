@@ -32,7 +32,7 @@ ENV HOME=/home/wine \
     WINEPREFIX=/home/wine/prefix \
     WINEARCH=win64 \
     WINEDEBUG=-all \
-    WINEDLLOVERRIDES=winemenubuilder.exe=d \
+    WINEDLLOVERRIDES="mscoree,mshtml,winemenubuilder.exe=" \
     DISPLAY=:0 \
     MATLAB_RELEASE=R2024b
 

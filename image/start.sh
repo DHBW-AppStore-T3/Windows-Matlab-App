@@ -33,21 +33,20 @@ openbox &
 # protection of the page is the platform's job (ingress), not VNC's.
 x11vnc -display :0 -forever -shared -nopw -localhost -rfbport 5900 -quiet &
 
-if [ ! -f "$WINEPREFIX/system.reg" ]; then
-  wineboot --init || true
-fi
-
-# Install MATLAB once; /tmp/matlab-install.log shows progress in the desktop terminal.
-if [ ! -f "$HOME/.matlab-installed" ] && [ "${SKIP_MATLAB_INSTALL:-0}" != "1" ]; then
-  (install-matlab.sh >"$HOME/matlab-install.log" 2>&1 && touch "$HOME/.matlab-installed" \
-    && wine 'C:\MATLAB\bin\matlab.exe' -desktop) &
-  xterm -geometry 120x30+20+20 -e "tail -f $HOME/matlab-install.log" &
-fi
-
-# Later starts: MATLAB opens by itself.
-if [ -f "$HOME/.matlab-installed" ]; then
-  wine 'C:\MATLAB\bin\matlab.exe' -desktop &
-fi
+# Everything Wine-related runs in the background so the web page is up at once.
+(
+  [ -f "$WINEPREFIX/system.reg" ] || wineboot --init || true
+  wineserver -w || true
+  if [ ! -f "$HOME/.matlab-installed" ] && [ "${SKIP_MATLAB_INSTALL:-0}" != "1" ]; then
+    xterm -geometry 120x30+20+20 -e "tail -F $HOME/matlab-install.log" &
+    if install-matlab.sh >"$HOME/matlab-install.log" 2>&1; then
+      touch "$HOME/.matlab-installed"
+      wine 'C:\MATLAB\bin\matlab.exe' -desktop
+    fi
+  elif [ -f "$HOME/.matlab-installed" ]; then
+    wine 'C:\MATLAB\bin\matlab.exe' -desktop
+  fi
+) &
 
 # Listen on all families: the cluster is IPv6-primary.
 exec websockify --web /usr/share/novnc "[::]:8080" localhost:5900
