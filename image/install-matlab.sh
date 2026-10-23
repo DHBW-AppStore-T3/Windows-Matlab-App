@@ -10,7 +10,11 @@ MPM="$HOME/mpm.exe"
 
 [ -f "$MPM" ] || curl -fsSL -o "$MPM" "$MPM_URL"
 
-ls -l "$MPM"; wine "$MPM" --help 2>&1 | head -20 || true
+# mpm.exe and MATLAB need the real Microsoft VC++ runtime; Wine's builtin one
+# is only a partial stub (ddux_loggingapi.dll fails to initialise without it).
+[ -f "$HOME/.vcrun-done" ] || { winetricks -q vcrun2019 corefonts && touch "$HOME/.vcrun-done"; }
+wineserver -w || true
+wine "$MPM" --help 2>&1 | head -20 || true
 wine "$MPM" install \
   --release "${MATLAB_RELEASE:-R2024b}" \
   --destination 'C:\MATLAB' \

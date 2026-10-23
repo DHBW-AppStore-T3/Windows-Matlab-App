@@ -8,7 +8,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN dpkg --add-architecture i386 \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-      wine wine64 wine32 libwine winbind cabextract ca-certificates curl procps \
+      wine wine64 wine32 libwine winbind winetricks cabextract ca-certificates curl procps \
       xvfb x11vnc openbox novnc websockify x11-utils xdotool imagemagick xterm \
       fonts-liberation fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
