@@ -8,10 +8,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN dpkg --add-architecture i386 \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
-      wine wine64 wine32 libwine winbind winetricks cabextract ca-certificates curl procps \
+      wine wine64 wine32 libwine winbind cabextract unzip ca-certificates curl procps \
       xvfb x11vnc openbox novnc websockify x11-utils xdotool imagemagick xterm \
       fonts-liberation fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
+
+# winetricks is in Debian contrib, so take the pinned upstream script.
+RUN curl -fsSL -o /usr/local/bin/winetricks \
+      https://raw.githubusercontent.com/Winetricks/winetricks/20240105/src/winetricks \
+ && chmod 0755 /usr/local/bin/winetricks
 
 # HOME is the storage volume (mounted by the platform). The platform runs the
 # container as UID 1000 with a read-only root filesystem, so everything that
