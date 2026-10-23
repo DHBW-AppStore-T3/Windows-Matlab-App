@@ -56,5 +56,8 @@ if [ "$rc" = 0 ]; then
 fi
 
 docker logs wm >"$VOL/container.log" 2>&1 || true
-mkdir -p spike-out && sudo cp "$VOL"/*.log "$VOL"/*.png spike-out/ 2>/dev/null; sudo chmod -R a+r spike-out
+mkdir -p spike-out
+sudo bash -c "cp '$VOL'/*.log '$VOL'/*.png spike-out/ 2>/dev/null"; sudo chmod -R a+r spike-out
+for f in install run container; do echo "::group::$f.log"; tail -40 "spike-out/$f.log" 2>/dev/null; echo "::endgroup::"; done
+cat "$OUT" 2>/dev/null | tail -30
 docker rm -f wm >/dev/null
