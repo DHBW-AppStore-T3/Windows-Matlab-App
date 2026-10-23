@@ -7,7 +7,7 @@ set -uo pipefail
 IMAGE="${1:?image reference}"
 OUT="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 VOL="$(mktemp -d)"
-chmod 0777 "$VOL"
+sudo chown 1000:1000 "$VOL"
 
 report() { echo "$1" >>"$OUT"; }
 step() { echo "::group::$1"; }
@@ -56,5 +56,5 @@ if [ "$rc" = 0 ]; then
 fi
 
 docker logs wm >"$VOL/container.log" 2>&1 || true
-mkdir -p spike-out && cp -r "$VOL"/*.log "$VOL"/*.png spike-out/ 2>/dev/null || true
+mkdir -p spike-out && sudo cp "$VOL"/*.log "$VOL"/*.png spike-out/ 2>/dev/null; sudo chmod -R a+r spike-out
 docker rm -f wm >/dev/null
