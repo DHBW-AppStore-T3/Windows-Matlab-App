@@ -23,7 +23,7 @@ fi
 # Profile paths as the Windows side expects them (a missing one made winetricks see an empty %AppData%).
 mkdir -p "$WINEPREFIX/drive_c/users/wine/AppData/Roaming" "$WINEPREFIX/drive_c/users/wine/AppData/Local"
 export APPDATA='C:\users\wine\AppData\Roaming' LOCALAPPDATA='C:\users\wine\AppData\Local' USERPROFILE='C:\users\wine'
-WINEDEBUG=err+all,+loaddll,+module wine "$MPM" --help 2>&1 | grep -iE "ddux|err:|fail|not found|c0000|mwse" | head -40 || true
+WINEDEBUG=+loaddll,+seh,err+all wine "$MPM" --help 2>&1 | grep -E "loaddll|seh:|err:" | grep -v "wineboot" | tail -45 || true
 wine "$MPM" install \
   --release "${MATLAB_RELEASE:-R2024b}" \
   --destination 'C:\MATLAB' \
