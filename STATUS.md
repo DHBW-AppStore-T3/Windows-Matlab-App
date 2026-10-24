@@ -51,6 +51,10 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 
 - BLOCKIERT 5: Desktop-Datei appstore-staging-logins.txt hat nur e2e-test (student) + Keycloak-Admin-Konsole, keinen App-Admin/Dozenten. Studenten dürfen laut capabilities.py weder Apps registrieren noch deployen (nur teacher/admin). Rollen-Vergabe an wm.test (kcadm add-roles) wurde als "Permission Grant" abgelehnt. NICHT umgehen. Nötig: wm.test braucht mindestens die Rolle `teacher`. Wenn die App als PRIVAT (is_private) registriert wird, ist keine Admin-Freigabe nötig -> teacher reicht. Nutzer führt aus (oder erlaubt): kcadm add-roles -r dhbw --uusername wm.test --rolename teacher (Pod keycloak-79c7f74646-xhjmk, ns appstore-staging).
 
+- ERREICHT 2026-10-24 ~10:20: (v) Ressourcen-Auswahl E2E auf Staging verifiziert: wm.test (teacher, vom Nutzer per kcadm gesetzt) registrierte die App als PRIVAT (keine Admin-Freigabe nötig), Wizard zeigte "Rechenressourcen"-Karte (nur bei dieser App), gewählt 5Gi RAM -> Pod team-1-student1-demo-0 in ns dep-9346ab80 hat limits cpu=2 memory=5Gi, requests 500m/2560Mi (proportional), PVC 20Gi.
+- BUG (offen): in der Karte erscheinen "{{count}} vCPU" und "Erlaubt {{min}} – {{max}} · empfohlen {{default}}" unaufgelöst. Die App-i18n nutzt vermutlich einfache Klammern {x}. Fix in frontend (neuer PR), Tests anpassen (Regex /vcpu/ war zu lasch).
+- Deployment matlab-poc (dep-9346ab80) läuft: Pod startet, Image-Pull + MATLAB-Erstinstallation (~30 min) beobachten (kubectl -n dep-9346ab80 exec ... tail /home/wine/user/matlab-install.log), dann noVNC-URL über Ingress + VNC-Passwort (Access in der UI "my access").
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
