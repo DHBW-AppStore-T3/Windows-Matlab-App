@@ -24,8 +24,15 @@ workload:
       writablePaths: [/tmp]
   # HOME of the container: Wine prefix and MATLAB.
   storage: { size: 20Gi, mountPath: /home/wine }
-# The installer and the MathWorks activation need the internet.
+# The installer and the MathWorks activation need the internet, so it is on by default.
 egress: internet
+# Expert settings the person deploying may switch (wizard, "Experteneinstellungen"):
+#   internet   - off only makes sense for a volume that already has MATLAB installed and activated
+#   podNetwork - the pods of one deployment (one per person) may reach each other on port 8080
+podNetwork: none
+userChoices:
+  internet: true
+  podNetwork: true
 access:
   - { type: url, template: "https://{workload}-{deployment}.{domain}" }
   - { type: password, from: generated-password, username: "{user}" }
