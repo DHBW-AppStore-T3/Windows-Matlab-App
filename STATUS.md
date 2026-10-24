@@ -33,6 +33,8 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - BLOCKIERT (Stand 2026-10-24 ~01:10): Das Mergen der vier grünen PRs (backend#21, worker#16, deployment#119, frontend#40, alle CI grün) wurde vom Auto-Mode-Classifier abgelehnt ("Merge Without Review"). NICHT umgehen (auch kein --auto). Der Nutzer muss die PRs mergen oder eine Permission-Regel erlauben. Ohne Merge kennt Staging `resourceBounds` nicht -> App-Version kann dort nicht eingereicht werden (extra=forbid) -> Schritte iii/iv/v-Staging blockiert.
 - app-registry PR #3 ist gemergt (Validator + Eintrag). Windows-Matlab-App: main=dev gepusht, CI-Run 40042632753 baut das Image (ca. 35 min, danach Digest in appstore.yaml, Tag v1.0.0).
 
+- BLOCKIERT 2: app-registry app-ci.yml referenziert `trivy-action@0.28.0` (existiert nicht, Tag ist v0.28.0) -> Build-Job der App-CI bricht beim Setup ab. Fix-PR: app-registry#4 (fix/trivy-action-tag). Muss gemergt werden (Merge-Permission fehlt, s.o.). Danach CI-Run der Windows-Matlab-App neu starten: `gh workflow run ci.yml -R DHBW-AppStore-T3/Windows-Matlab-App --ref dev` (hadolint + validate sind bereits grün).
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
