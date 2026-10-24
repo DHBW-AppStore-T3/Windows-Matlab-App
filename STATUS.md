@@ -43,6 +43,9 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 
 - (ii) ERLEDIGT: App-CI grün (validate, hadolint, build, Trivy, push). Image ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:f268d7b0e2d0cbf65b046c9caa7f1cdceb2aeb3f06b0a43de5ad7a23ea7f11e7 (öffentlich, anonym ziehbar) in appstore.yaml gepinnt; Tag v1.0.0. Registry-Eintrag + Validator gemergt.
 
+- ENTSCHIEDEN (Nutzer: "mach bzgl user das was besser ist"): Option A. Testuser `wm.test` (nur Rolle student, Realm dhbw, staging) angelegt; Passwort NUR in scratchpad/wm-test-password.txt (chmod 600), nicht ausgeben. Registrieren der App: dozent.demo (teacher), Freigabe: admin.demo, beide Passwort = Secret keycloak-secret/demo-password (ns appstore-staging). Danach Deployment als wm.test.
+- Staging-URL: https://appstore-staging.t3-k8s.s242437-at-student-dhbw-mannheim-de.users.dhbw.site/ (Keycloak sso-staging.<zone>)
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
