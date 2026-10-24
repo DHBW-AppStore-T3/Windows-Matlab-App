@@ -55,6 +55,10 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - BUG (offen): in der Karte erscheinen "{{count}} vCPU" und "Erlaubt {{min}} – {{max}} · empfohlen {{default}}" unaufgelöst. Die App-i18n nutzt vermutlich einfache Klammern {x}. Fix in frontend (neuer PR), Tests anpassen (Regex /vcpu/ war zu lasch).
 - Deployment matlab-poc (dep-9346ab80) läuft: Pod startet, Image-Pull + MATLAB-Erstinstallation (~30 min) beobachten (kubectl -n dep-9346ab80 exec ... tail /home/wine/user/matlab-install.log), dann noVNC-URL über Ingress + VNC-Passwort (Access in der UI "my access").
 
+- ERREICHT 2026-10-24 ~09:35 (i)+(iv bis Login): Staging-Deployment matlab-poc (ns dep-9346ab80): Pod Ready, MATLAB-Erstinstallation in ~10 min fertig (100 %, 4.6G), danach startet MATLAB selbst und zeigt MathWorks Product Activation (Screenshot an Nutzer gesendet). Voller MATLAB-Test nur mit Lizenz-Login.
+- OFFEN-PRs (alle CI-grün/laufend, Merge braucht Nutzer-OK je Runde): frontend#42 (i18n-Fix {count}), backend#24 (setup-progress + kein stale Warning), deployment#121 (pods/log für API-Reader), frontend#43 (zweiter Balken + "App erfolgreich gestartet" + 10s-Polling). App: start.sh meldet `appstore-progress {json}`; Image-CI Run 40074580527 -> neuer Digest -> appstore.yaml -> Tag v1.0.1 (noch nicht).
+- Subagent-Analyse (Nutzer-Wunsch Expertenschalter Internet / Pod-Netz): machbar, Aufwand M; Ergebnis dem Nutzer vorgestellt, wartet auf Entscheidung.
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
