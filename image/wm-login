@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""Types into MATLAB's MathWorks sign-in dialog.
+
+Under Wine that dialog (an embedded Chromium) does not accept typed
+characters. Its DevTools port (opened by wmwrap.exe, local only) can insert
+text and press keys directly, so this helper does that for you:
+click into the field in the dialog first, then use this menu.
+
+  wm-login                 interactive menu (run it in the terminal window)
+  wm-login type TEXT       insert TEXT into the focused field
+  wm-login key Enter|Tab   press that key
+  wm-login submit          submit the form / press the main button
+  wm-login daemon          background: makes typing work in empty fields
+"""
+import base64, json, os, socket, struct, sys, urllib.request, getpass
+
+
+
+PORTS = (9222, 9223)  # product-activation dialog, ServiceHost sign-in window (see wmwrap.exe)
+
+
+def open_ports():
+    ports = []
+    for port in PORTS:
+        try:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=2).read()
+            ports.append(port)
+        except Exception:
+            pass
+    return ports
+
+
+def find_port():
+    ports = open_ports()
+    if not ports:
+        sys.exit("Kein Anmeldedialog gefunden (läuft MATLAB und ist der Dialog offen?).")
+    return ports[0]
+
+
+def targets(port):
+    return [t for t in json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json", timeout=5))
+            if t.get("webSocketDebuggerUrl") and t.get("type") in ("page", "iframe")]
+
+
+class Cdp:
+    def __init__(self, port, target=None):
+        if target is None:
+            pages = targets(port)
+            # The sign-in form lives in an iframe of its own (its own DevTools
+            # target); fall back to the dialog page when there is none.
+            frames = [p for p in pages if p.get("type") == "iframe"]
+            pages = frames or [p for p in pages if p.get("type") == "page"]
+            if not pages:
+                sys.exit("Der Dialog hat keine Seite.")
+            target = pages[0]
+        path = target["webSocketDebuggerUrl"].split(str(port), 1)[1]
+        self.sock = socket.create_connection(("127.0.0.1", port), timeout=10)
+        key = base64.b64encode(os.urandom(16)).decode()
+        self.sock.sendall((f"GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\n"
+                           f"Connection: Upgrade\r\nSec-WebSocket-Key: {key}\r\n"
+                           "Sec-WebSocket-Version: 13\r\n\r\n").encode())
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            buf += self.sock.recv(4096)
+        if b" 101 " not in buf.split(b"\r\n", 1)[0]:
+            sys.exit("DevTools-Verbindung abgelehnt.")
+        self.n = 0
+
+    def _read(self, n):
+        data = b""
+        while len(data) < n:
+            chunk = self.sock.recv(n - len(data))
+            if not chunk:
+                raise ConnectionError("closed")
+            data += chunk
+        return data
+
+    def _frame(self):
+        b1, b2 = self._read(2)
+        size = b2 & 0x7F
+        if size == 126:
+            size = struct.unpack(">H", self._read(2))[0]
+        elif size == 127:
+            size = struct.unpack(">Q", self._read(8))[0]
+        return b1 & 0x0F, self._read(size)
+
+    def call(self, method, **params):
+        self.n += 1
+        payload = json.dumps({"id": self.n, "method": method, "params": params}).encode()
+        mask = os.urandom(4)
+        head = bytes([0x81])
+        if len(payload) < 126:
+            head += bytes([0x80 | len(payload)])
+        else:
+            head += bytes([0x80 | 126]) + struct.pack(">H", len(payload))
+        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+        self.sock.sendall(head + mask + masked)
+        while True:
+            op, data = self._frame()
+            if op == 1:
+                msg = json.loads(data)
+                if msg.get("id") == self.n:
+                    if "error" in msg:
+                        sys.exit(f"DevTools-Fehler: {msg['error']}")
+                    return msg.get("result", {})
+
+
+KEYS = {"Enter": (13, "\r"), "Tab": (9, ""), "Backspace": (8, "")}
+
+# The page's own typing path is what is broken, so the text is put into the
+# focused field the way the page itself would after typing: native value
+# setter plus input/change events (works for React/Angular forms as well).
+SET_VALUE = """(function (t) {
+  var e = document.activeElement;
+  if (!e || !('value' in e)) return 'kein Eingabefeld hat den Fokus';
+  var proto = e.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  var set = Object.getOwnPropertyDescriptor(proto, 'value').set;
+  set.call(e, (e.value || '') + t);
+  e.dispatchEvent(new Event('input', {bubbles: true}));
+  e.dispatchEvent(new Event('change', {bubbles: true}));
+  return 'ok';
+})(%s)"""
+
+SUBMIT = """(function () {
+  var e = document.activeElement;
+  if (e && e.form && e.form.requestSubmit) { e.form.requestSubmit(); return 'form'; }
+  var b = document.querySelector('button[type=submit],input[type=submit],button.btn-primary,button');
+  if (b) { b.click(); return 'button'; }
+  return 'nichts zum Absenden gefunden';
+})()"""
+
+
+# In an empty field the page gets no characters from Wine (a field that already
+# holds text takes them fine), so the typing is done by the page itself: a
+# keydown handler inserts printable characters the way the page would after
+# typing. Injected into every page and frame of the dialog by `wm-login daemon`.
+TYPING_JS = """(function () {
+  if (window.__wmOff) window.__wmOff();   // a newer copy replaces an older one
+  var textTypes = ['text', 'email', 'password', 'search', 'tel', 'url', 'number', ''];
+  var skip = null;
+  window.__wmLog = [];
+  // Sometimes Wine does deliver the character itself as well; the copy that
+  // follows our own insertion is dropped so nothing is typed twice.
+  function onBeforeInput(e) {
+    if (skip && e.inputType === 'insertText' && e.data === skip.key && Date.now() < skip.until) {
+      e.preventDefault();
+      skip = null;
+    }
+  }
+  function onKeyDown(e) {
+    window.__wmLog.push([e.key, e.code, e.ctrlKey ? 'C' : '', e.altKey ? 'A' : '', e.shiftKey ? 'S' : '',
+                         e.target && e.target.tagName, e.target && e.target.type].join(' '));
+    if (window.__wmLog.length > 50) window.__wmLog.shift();
+    if (e.isComposing || e.key.length !== 1) return;
+    if ((e.ctrlKey || e.metaKey || e.altKey) && !(e.ctrlKey && e.altKey)) return;  // shortcuts; Ctrl+Alt is AltGr
+    var t = e.target;
+    if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'TEXTAREA')) return;
+    if (t.tagName === 'INPUT' && textTypes.indexOf((t.type || '').toLowerCase()) < 0) return;
+    e.preventDefault();
+    var proto = t.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    var set = Object.getOwnPropertyDescriptor(proto, 'value').set;
+    var v = t.value || '', a = null, b = null;
+    try { a = t.selectionStart; b = t.selectionEnd; } catch (x) {}   // not available for type=email
+    if (a === null || b === null) { a = b = v.length; }
+    set.call(t, v.slice(0, a) + e.key + v.slice(b));
+    try { t.setSelectionRange(a + 1, a + 1); } catch (x) {}
+    skip = {key: e.key, until: Date.now() + 400};
+    t.dispatchEvent(new InputEvent('input', {bubbles: true, data: e.key, inputType: 'insertText'}));
+  }
+  document.addEventListener('beforeinput', onBeforeInput, true);
+  document.addEventListener('keydown', onKeyDown, true);
+  window.__wmOff = function () {
+    document.removeEventListener('beforeinput', onBeforeInput, true);
+    document.removeEventListener('keydown', onKeyDown, true);
+  };
+})()"""
+
+
+def daemon():
+    """Keep TYPING_JS installed in every page/frame of the sign-in windows."""
+    import time
+    attached = {}
+    while True:
+        current = {}
+        for port in PORTS:
+            try:
+                for t in targets(port):
+                    current[(port, t["id"])] = t
+            except Exception:
+                pass
+        for key in list(attached):
+            if key not in current:
+                attached.pop(key)
+        for key, target in current.items():
+            if key in attached:
+                continue
+            try:
+                c = Cdp(key[0], target)
+                c.call("Page.addScriptToEvaluateOnNewDocument", source=TYPING_JS)
+                c.call("Runtime.evaluate", expression=TYPING_JS)
+                attached[key] = c
+            except BaseException:
+                pass
+        time.sleep(1)
+
+
+def insert(cdp, text):
+    res = cdp.call("Runtime.evaluate", expression=SET_VALUE % json.dumps(text), returnByValue=True)
+    out = res.get("result", {}).get("value")
+    if out != "ok":
+        print(out)
+
+
+def submit(cdp):
+    res = cdp.call("Runtime.evaluate", expression=SUBMIT, returnByValue=True)
+    print(res.get("result", {}).get("value"))
+
+
+def press(cdp, name):
+    code, text = KEYS[name]
+    ev = dict(key=name, code=name, windowsVirtualKeyCode=code, nativeVirtualKeyCode=code)
+    cdp.call("Input.dispatchKeyEvent", type="keyDown", text=text, **ev)
+    cdp.call("Input.dispatchKeyEvent", type="keyUp", **ev)
+
+
+def main():
+    if sys.argv[1:] == ["daemon"]:
+        daemon()
+    cdp = Cdp(find_port())
+    cdp.call("Emulation.setFocusEmulationEnabled", enabled=True)
+    args = sys.argv[1:]
+    if args[:1] == ["type"] and len(args) == 2:
+        insert(cdp, args[1])
+    elif args[:1] == ["key"] and len(args) == 2 and args[1] in KEYS:
+        press(cdp, args[1])
+    elif args == ["submit"]:
+        submit(cdp)
+    elif not args:
+        print("MathWorks-Anmeldung: erst im Dialog in das Feld klicken, dann hier wählen.")
+        while True:
+            print("\n[1] Text eingeben (E-Mail)   [2] Passwort eingeben (verdeckt)\n"
+                  "[3] Absenden (Next/Enter)     [4] Tab drücken   [5] Löschen   [q] Ende")
+            choice = input("> ").strip()
+            if choice == "1":
+                insert(cdp, input("Text: "))
+            elif choice == "2":
+                insert(cdp, getpass.getpass("Passwort: "))
+            elif choice == "3":
+                submit(cdp)
+            elif choice == "4":
+                press(cdp, "Tab")
+            elif choice == "5":
+                for _ in range(int(input("Wie viele Zeichen? ") or 1)):
+                    press(cdp, "Backspace")
+            elif choice.lower() == "q":
+                break
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

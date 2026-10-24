@@ -3,9 +3,14 @@
 # volume. MATLAB itself is NOT part of the image (licence): start.sh installs
 # it into the prefix on first start with MathWorks' own mpm.exe.
 #
-# Wine is built here with one patch (patches/): upstream Wine 11.0 stubs
-# GetProcessGroupAffinity, and MathWorks' installer and MATLAB abort when it
-# fails ("ddux_loggingapi.dll failed to initialize").
+# Wine is built here with patches (patches/), each one a bug that stops
+# MathWorks' installer or MATLAB:
+#  0001 GetProcessGroupAffinity is a stub, so mpm.exe and MATLAB abort
+#       ("ddux_loggingapi.dll failed to initialize").
+#  0002 files get only 2 access entries, but MathWorks' secret store insists
+#       on user + Local System + Administrators (else no sign-in is saved).
+#  0003 AES-GCM call chaining is not implemented, so xmlsec writes a secrets
+#       vault that cannot be read back (STATUS_AUTH_TAG_MISMATCH).
 
 FROM docker.io/library/debian:bookworm-slim AS wine-build
 ARG WINE_VERSION=11.0
@@ -29,17 +34,28 @@ RUN ../wine-${WINE_VERSION}/configure --prefix=/opt/wine --enable-archs=i386,x86
  && make -j"$(nproc)" \
  && make install
 
+# Small Windows helpers for the sign-in dialog (see start.sh).
+FROM docker.io/library/debian:bookworm-slim AS helpers
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 \
+ && rm -rf /var/lib/apt/lists/*
+COPY wmchar/ /src/
+RUN mkdir -p /out \
+ && x86_64-w64-mingw32-gcc -O2 -Wall -mwindows -o /out/wmredraw.exe /src/wmredraw.c -luser32 \
+ && x86_64-w64-mingw32-gcc -O2 -Wall -o /out/wmwrap.exe /src/wmwrap.c
+
 FROM docker.io/library/debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      ca-certificates curl winbind cabextract unzip procps \
+      ca-certificates curl winbind cabextract unzip procps python3 \
       libx11-6 libxext6 libxrender1 libxrandr2 libxi6 libxcursor1 libxinerama1 libxcomposite1 \
       libxfixes3 libxxf86vm1 libfreetype6 libfontconfig1 libgnutls30 libgl1 libgl1-mesa-dri libglu1-mesa libosmesa6 \
       xvfb x11vnc openbox novnc websockify x11-utils xdotool imagemagick xterm \
       fonts-liberation fonts-dejavu-core \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=wine-build /opt/wine /opt/wine
+COPY --from=helpers /out/ /opt/wine-helpers/
 
 # MATLAB's libmx.dll needs std::get_new_handler, which Wine's builtin msvcp140
 # lacks; the Microsoft runtime that install-matlab.sh installs must win (n,b).
@@ -57,7 +73,8 @@ ENV PATH=/opt/wine/bin:$PATH \
 
 COPY start.sh /usr/local/bin/start.sh
 COPY install-matlab.sh /usr/local/bin/install-matlab.sh
-RUN chmod 0755 /usr/local/bin/start.sh /usr/local/bin/install-matlab.sh
+COPY wm-login /usr/local/bin/wm-login
+RUN chmod 0755 /usr/local/bin/start.sh /usr/local/bin/install-matlab.sh /usr/local/bin/wm-login
 
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/start.sh"]

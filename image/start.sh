@@ -12,6 +12,9 @@ export XDG_RUNTIME_DIR=/tmp/xdg
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 0700 "$XDG_RUNTIME_DIR"
 
+# A restarted container keeps /tmp: drop the lock and socket the killed X
+# server left behind, or Xvfb refuses to start and nothing has a display.
+rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
 Xvfb :0 -screen 0 "${SCREEN:-1600x900x24}" -nolisten tcp &
 for _ in $(seq 1 50); do xdpyinfo >/dev/null 2>&1 && break; sleep 0.2; done
 # Right-click on the desktop opens this menu (MATLAB, Windows tools).
@@ -63,8 +66,49 @@ report_progress() {  # $1: pid of the installer, $2: its log
   done
 }
 
+# MathWorks' secret store (it keeps the sign-in) accepts a folder only when
+# just the Windows user, Local System and Administrators have access. Wine turns
+# Unix permissions into those entries, so everything the user's profile and
+# ProgramData hold must be closed to group and others.
+harden_profile() {
+  local u
+  chmod go-rwx "$WINEPREFIX" "$WINEPREFIX/drive_c" "$WINEPREFIX/drive_c/users" 2>/dev/null || true
+  chmod -R go-rwx "$WINEPREFIX/drive_c/users" "$WINEPREFIX/drive_c/ProgramData" 2>/dev/null || true
+  for u in "$WINEPREFIX"/drive_c/users/*/AppData/Local/Temp; do
+    [ -d "$u" ] || continue
+    rm -rf "$u/.mathworks"
+    mkdir -m 700 "$u/.mathworks"
+  done
+}
+
+# Under Wine the embedded browser of MathWorks' sign-in dialog shows typed text
+# only after a redraw (wmredraw.exe) and takes none in an empty field (wm-login
+# daemon types it into the page). The daemon needs a DevTools port, which
+# wmwrap.exe opens for that one dialog by standing in for MATLABWindow.exe. It
+# is only needed until the sign-in is saved; afterwards the original runs.
+login_helpers() {
+  local bin="$WINEPREFIX/drive_c/MATLAB/bin/win64" store
+  [ -f "$bin/MATLABWindow.exe" ] || return 0
+  store=$(ls "$WINEPREFIX"/drive_c/users/*/AppData/Roaming/MathWorks/credentials/default_store.xml 2>/dev/null | head -1 || true)
+  if [ -z "$store" ] || ! grep -q RESTPersonalAccessToken "$store" 2>/dev/null; then
+    [ -f "$bin/MATLABWindow-real.exe" ] || mv "$bin/MATLABWindow.exe" "$bin/MATLABWindow-real.exe"
+    cp /opt/wine-helpers/wmwrap.exe "$bin/MATLABWindow.exe"
+    wm-login daemon >"$HOME/wm-login.log" 2>&1 &
+  elif [ -f "$bin/MATLABWindow-real.exe" ]; then
+    cp "$bin/MATLABWindow-real.exe" "$bin/MATLABWindow.exe"
+  fi
+}
+
+start_matlab() {
+  harden_profile
+  wine /opt/wine-helpers/wmredraw.exe &
+  login_helpers
+  wine 'C:\MATLAB\bin\matlab.exe' -desktop
+}
+
 # Everything Wine-related runs in the background so the web page is up at once.
 (
+  umask 077
   [ -f "$WINEPREFIX/system.reg" ] || wineboot --init || true
   wineserver -w || true
   if [ ! -f "$HOME/.matlab-installed" ] && [ "${SKIP_MATLAB_INSTALL:-0}" != "1" ]; then
@@ -75,10 +119,10 @@ report_progress() {  # $1: pid of the installer, $2: its log
     if wait "$installer"; then
       touch "$HOME/.matlab-installed"
       printf 'appstore-progress {"percent":100,"step":"MATLAB ist installiert","etaSeconds":0}\n'
-      wine 'C:\MATLAB\bin\matlab.exe' -desktop
+      start_matlab
     fi
   elif [ -f "$HOME/.matlab-installed" ]; then
-    wine 'C:\MATLAB\bin\matlab.exe' -desktop
+    start_matlab
   fi
 ) &
 
