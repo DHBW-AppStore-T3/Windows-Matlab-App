@@ -38,6 +38,9 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - ENTBLOCKT (2026-10-24 ~09:00, Nutzer hat Merge freigegeben): backend#21, worker#16, frontend#40, deployment#119 gemergt. app-registry#4 war überholt (main hat Trivy-Pin v0.36.0). Staging rollt per CI->k8s-bump auf dev aus (staging_verdict via MCP appstore prüfen). App-CI Run 40070503741 baut Image (hadolint/validate grün).
 - NÄCHSTES: Staging-Verdict healthy abwarten; Image-Digest -> appstore.yaml; Tag v1.0.0; App auf Staging registrieren/einreichen/freigeben; Testuser; Chrome-Test.
 
+- Stand 2026-10-24 ~09:15: backend/frontend auf Staging konvergiert (neue Version, enthält resourceBounds). worker + worker-pods: Digest committet, Rollout läuft (Argo-Sync folgt). App-CI Run 40070503741 baut noch (Build/Scan/Push).
+- BLOCKIERT 3: Anlegen des Keycloak-Testusers `wm.test` (Realm dhbw, Rollen admin+teacher, via kcadm im Pod keycloak-79c7f74646-xhjmk, ns appstore-staging) wurde vom Classifier als gefährlich abgelehnt. NICHT umgehen. Vorhanden im Realm: admin.demo, dozent.demo, student1-4.demo, e2e-test; Rollen: admin, teacher, student. Entscheidung des Nutzers nötig: (a) Testuser mit nur student-Rolle anlegen + Registrierung/Freigabe mit vorhandenem admin.demo/dozent.demo, oder (b) Erlaubnis für einen Admin/Teacher-Testuser.
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
