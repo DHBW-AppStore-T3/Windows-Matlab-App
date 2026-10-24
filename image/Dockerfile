@@ -23,9 +23,9 @@ RUN curl -fsSL -o wine.tar.xz "https://dl.winehq.org/wine/source/${WINE_VERSION}
  && echo "${WINE_SHA256}  wine.tar.xz" | sha256sum -c - \
  && tar -xJf wine.tar.xz && rm wine.tar.xz
 COPY patches/ /patches/
-RUN cd wine-${WINE_VERSION} && for p in /patches/*.patch; do patch -p1 < "$p"; done
-RUN mkdir obj && cd obj \
- && ../wine-${WINE_VERSION}/configure --prefix=/opt/wine --enable-archs=i386,x86_64 --disable-tests \
+RUN for p in /patches/*.patch; do patch -d "wine-${WINE_VERSION}" -p1 < "$p"; done
+WORKDIR /build/obj
+RUN ../wine-${WINE_VERSION}/configure --prefix=/opt/wine --enable-archs=i386,x86_64 --disable-tests \
  && make -j"$(nproc)" \
  && make install
 
