@@ -41,6 +41,8 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - Stand 2026-10-24 ~09:15: backend/frontend auf Staging konvergiert (neue Version, enthält resourceBounds). worker + worker-pods: Digest committet, Rollout läuft (Argo-Sync folgt). App-CI Run 40070503741 baut noch (Build/Scan/Push).
 - BLOCKIERT 3: Anlegen des Keycloak-Testusers `wm.test` (Realm dhbw, Rollen admin+teacher, via kcadm im Pod keycloak-79c7f74646-xhjmk, ns appstore-staging) wurde vom Classifier als gefährlich abgelehnt. NICHT umgehen. Vorhanden im Realm: admin.demo, dozent.demo, student1-4.demo, e2e-test; Rollen: admin, teacher, student. Entscheidung des Nutzers nötig: (a) Testuser mit nur student-Rolle anlegen + Registrierung/Freigabe mit vorhandenem admin.demo/dozent.demo, oder (b) Erlaubnis für einen Admin/Teacher-Testuser.
 
+- (ii) ERLEDIGT: App-CI grün (validate, hadolint, build, Trivy, push). Image ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:f268d7b0e2d0cbf65b046c9caa7f1cdceb2aeb3f06b0a43de5ad7a23ea7f11e7 (öffentlich, anonym ziehbar) in appstore.yaml gepinnt; Tag v1.0.0. Registry-Eintrag + Validator gemergt.
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
