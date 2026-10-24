@@ -11,7 +11,7 @@ workload:
   containers:
     - name: desktop
       # Built by .github/workflows/ci.yml. After changing image/, copy the new digest here.
-      image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:1246b6898aecfacdffcf857f350208a722baff582d0b110dca22275fc5a96375
+      image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:1d3b43b6ea8b689ad65a43f4368eb18038f1743c032fe8734d45db4482c1816b
       expose: { port: 8080, path: / }
       # Defaults. People can choose their own within resourceBounds when they deploy.
       # MATLAB's desktop and the installer need real memory: 2 Gi was OOM-killed on staging.
