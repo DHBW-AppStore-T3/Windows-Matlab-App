@@ -59,6 +59,9 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - OFFEN-PRs (alle CI-grün/laufend, Merge braucht Nutzer-OK je Runde): frontend#42 (i18n-Fix {count}), backend#24 (setup-progress + kein stale Warning), deployment#121 (pods/log für API-Reader), frontend#43 (zweiter Balken + "App erfolgreich gestartet" + 10s-Polling). App: start.sh meldet `appstore-progress {json}`; Image-CI Run 40074580527 -> neuer Digest -> appstore.yaml -> Tag v1.0.1 (noch nicht).
 - Subagent-Analyse (Nutzer-Wunsch Expertenschalter Internet / Pod-Netz): machbar, Aufwand M; Ergebnis dem Nutzer vorgestellt, wartet auf Entscheidung.
 
+- 2026-10-24 ~10:00: App-Image v1.0.1 (meldet appstore-progress) gepinnt: sha256:1246b689...; Tag v1.0.1 gepusht. Staging-Deployment matlab-poc läuft noch mit v1.0.0 (kein zweiter Balken dort, weil Image älter und PRs backend#24/deployment#121/frontend#43 noch nicht gemergt).
+- NEU (Nutzerwunsch): Issue DHBW-AppStore-T3/.github#11 (Internetzugriff + Vernetzte Pods, Opt-in, Standard aus). 3 Subagents arbeiten parallel auf Branch feat/11-network-expert-settings: WP1 backend+worker, WP2 deployment (Admission), WP3 frontend. Danach: Reviewer-Subagents, generierte Frontend-Typen aus backend/openapi.json nachziehen, Bericht an Nutzer. NICHT mergen ohne Nutzer-OK.
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
