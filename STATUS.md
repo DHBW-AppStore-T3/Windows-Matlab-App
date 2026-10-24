@@ -46,6 +46,9 @@ Fertig erst wenn alle 5 Punkte erfüllt: (i) MATLAB läuft unter Wine im Pod, (i
 - ENTSCHIEDEN (Nutzer: "mach bzgl user das was besser ist"): Option A. Testuser `wm.test` (nur Rolle student, Realm dhbw, staging) angelegt; Passwort NUR in scratchpad/wm-test-password.txt (chmod 600), nicht ausgeben. Registrieren der App: dozent.demo (teacher), Freigabe: admin.demo, beide Passwort = Secret keycloak-secret/demo-password (ns appstore-staging). Danach Deployment als wm.test.
 - Staging-URL: https://appstore-staging.t3-k8s.s242437-at-student-dhbw-mannheim-de.users.dhbw.site/ (Keycloak sso-staging.<zone>)
 
+- BLOCKIERT 4 (2026-10-24 ~09:40): Lesen des Staging-Demo-Passworts (Secret keycloak-secret/demo-password) wurde als "Credential Materialization" abgelehnt -> kein Login als dozent.demo/admin.demo. wm.test (student) kann die App weder registrieren noch freigeben (Freigabe = Admin). NICHT umgehen. Nutzer muss: (a) App selbst in Staging registrieren + v1.0.0 freigeben (Repo https://github.com/DHBW-AppStore-T3/Windows-Matlab-App, Tag v1.0.0) ODER (b) mir Passwort/Admin-Zugang explizit freigeben. Danach: Deployment als wm.test per Chrome, Ressourcen-Slider prüfen, Pod/Install beobachten.
+- Chrome-Tab 1997269919 steht auf der Keycloak-Anmeldung (staging).
+
 ## Offen (Reihenfolge)
 1. Build-Run 40031812224 abwarten, Digest holen, Sandbox-Pod mit neuem Image: läuft mpm.exe? MATLAB installieren (R2024b, Produkt MATLAB), matlab.exe startet bis Aktivierungsdialog? (i)
 2. appstore.yaml (scope user, storage <=20Gi, egress internet, resources default 2 vCPU/4Gi, resourceBounds), Digest eintragen, Tag v1.0.0, app-registry PR (apps/windows-matlab-app.yaml + CI caller), deployment seed description, Frontend-Icon. (ii)
