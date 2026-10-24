@@ -40,14 +40,41 @@ else
 fi
 x11vnc -display :0 -forever -shared "${VNC_AUTH[@]}" -localhost -rfbport 5900 -quiet &
 
+# Tells the platform how far the setup is: one log line the AppStore reads
+# (appstore-progress {json}); it shows a second bar with the remaining time.
+# mpm prints "Installing... 42%" while it unpacks; before that there is no
+# percentage, so the first estimate is SETUP_ESTIMATE_SECONDS.
+report_progress() {  # $1: pid of the installer, $2: its log
+  local start now pct elapsed eta
+  start=$(date +%s)
+  while kill -0 "$1" 2>/dev/null; do
+    now=$(date +%s)
+    elapsed=$((now - start))
+    pct=$(tr '\r' '\n' <"$2" 2>/dev/null | grep -o '[0-9]\{1,3\}%' | tail -1 | tr -d '%') || true
+    pct=${pct:-0}
+    if [ "$pct" -ge 3 ]; then
+      eta=$((elapsed * (100 - pct) / pct))
+    else
+      eta=$((${SETUP_ESTIMATE_SECONDS:-2400} - elapsed))
+      [ "$eta" -lt 60 ] && eta=60
+    fi
+    printf 'appstore-progress {"percent":%s,"step":"%s","etaSeconds":%s}\n' "$pct" "MATLAB wird installiert (nur beim ersten Start)" "$eta"
+    sleep 10
+  done
+}
+
 # Everything Wine-related runs in the background so the web page is up at once.
 (
   [ -f "$WINEPREFIX/system.reg" ] || wineboot --init || true
   wineserver -w || true
   if [ ! -f "$HOME/.matlab-installed" ] && [ "${SKIP_MATLAB_INSTALL:-0}" != "1" ]; then
     xterm -geometry 120x30+20+20 -e "tail -F $HOME/matlab-install.log" &
-    if install-matlab.sh >"$HOME/matlab-install.log" 2>&1; then
+    install-matlab.sh >"$HOME/matlab-install.log" 2>&1 &
+    installer=$!
+    report_progress "$installer" "$HOME/matlab-install.log" &
+    if wait "$installer"; then
       touch "$HOME/.matlab-installed"
+      printf 'appstore-progress {"percent":100,"step":"MATLAB ist installiert","etaSeconds":0}\n'
       wine 'C:\MATLAB\bin\matlab.exe' -desktop
     fi
   elif [ -f "$HOME/.matlab-installed" ]; then
