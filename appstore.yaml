@@ -14,10 +14,14 @@ workload:
       image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:1246b6898aecfacdffcf857f350208a722baff582d0b110dca22275fc5a96375
       expose: { port: 8080, path: / }
       # Defaults. People can choose their own within resourceBounds when they deploy.
-      resources: { cpu: "2", memory: 4Gi, requests: { cpu: 500m, memory: 2Gi } }
+      # MATLAB's desktop and the installer need real memory: 2 Gi was OOM-killed on staging.
+      # The reservation is close to the real use on purpose, so the scheduler does not
+      # pack more Windows desktops onto a node than it can carry (the first start of
+      # several at once overloaded the single staging node).
+      resources: { cpu: "2", memory: 6Gi, requests: { cpu: "1", memory: 4Gi } }
       resourceBounds:
         cpu: { min: "1", max: "4" }
-        memory: { min: 2Gi, max: 8Gi }
+        memory: { min: 4Gi, max: 8Gi }
       env:
         # Password of the browser desktop (VNC).
         - { name: VNC_PASSWORD, from: generated-password }
