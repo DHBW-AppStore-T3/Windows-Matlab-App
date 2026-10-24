@@ -11,7 +11,7 @@ workload:
   containers:
     - name: desktop
       # Built by .github/workflows/ci.yml. After changing image/, copy the new digest here.
-      image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:f268d7b0e2d0cbf65b046c9caa7f1cdceb2aeb3f06b0a43de5ad7a23ea7f11e7
+      image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:1246b6898aecfacdffcf857f350208a722baff582d0b110dca22275fc5a96375
       expose: { port: 8080, path: / }
       # Defaults. People can choose their own within resourceBounds when they deploy.
       resources: { cpu: "2", memory: 4Gi, requests: { cpu: 500m, memory: 2Gi } }
