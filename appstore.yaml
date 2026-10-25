@@ -1,8 +1,7 @@
 # App contract v2: Windows 11 Desktop mit MATLAB R2024b als KubeVirt-VM,
 # eine VM pro Person, Zugang per noVNC im Browser.
-# Das Golden-Image (windows11-matlab-golden im Namespace vm-images) hat
-# MATLAB vorinstalliert — Start in unter 2 Minuten, kein 30-Minuten-Install.
-# Aktivierung mit dem MathWorks-Account (DHBW-Campuslizenz, Shibboleth).
+# Das Golden-Image liegt als Cinder-PVC in Namespace vm-poc.
+# MATLAB ist vorinstalliert — Start in unter 2 Minuten.
 apiVersion: appstore/v2
 name: windows-matlab-app
 runtime: kubevirt-vm
@@ -10,7 +9,6 @@ scope: user
 vm:
   cpuCores: 4
   memoryGiB: 8
-  # Disk-Klon vom Golden-Image (Cinder, ~90 GiB)
   diskGiB: 90
   imageRef: windows11-matlab-golden
   storageClass: cinder
