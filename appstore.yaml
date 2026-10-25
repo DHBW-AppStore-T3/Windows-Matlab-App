@@ -1,42 +1,21 @@
-# App contract v2: a Windows desktop (Wine) with MATLAB, one pod per person,
-# in the browser. MATLAB is not part of the image (licence): the first start
-# installs it onto the volume with MathWorks' mpm.exe (about 30 minutes), later
-# starts open it at once. Students activate with their MathWorks account
-# (campus licence, Shibboleth).
+# App contract v2: Windows 11 Desktop mit MATLAB R2024b als KubeVirt-VM,
+# eine VM pro Person, Zugang per noVNC im Browser.
+# Das Golden-Image (windows11-matlab-golden im Namespace vm-images) hat
+# MATLAB vorinstalliert — Start in unter 2 Minuten, kein 30-Minuten-Install.
+# Aktivierung mit dem MathWorks-Account (DHBW-Campuslizenz, Shibboleth).
 apiVersion: appstore/v2
 name: windows-matlab-app
-runtime: kubernetes
+runtime: kubevirt-vm
 scope: user
-workload:
-  containers:
-    - name: desktop
-      # Built by .github/workflows/ci.yml. After changing image/, copy the new digest here.
-      image: ghcr.io/dhbw-appstore-t3/apps/windows-matlab-app@sha256:1d3b43b6ea8b689ad65a43f4368eb18038f1743c032fe8734d45db4482c1816b
-      expose: { port: 8080, path: / }
-      # Defaults. People can choose their own within resourceBounds when they deploy.
-      # MATLAB's desktop and the installer need real memory: 2 Gi was OOM-killed on staging.
-      # The reservation is close to the real use on purpose, so the scheduler does not
-      # pack more Windows desktops onto a node than it can carry (the first start of
-      # several at once overloaded the single staging node).
-      resources: { cpu: "2", memory: 6Gi, requests: { cpu: "1", memory: 4Gi } }
-      resourceBounds:
-        cpu: { min: "1", max: "4" }
-        memory: { min: 4Gi, max: 8Gi }
-      env:
-        # Password of the browser desktop (VNC).
-        - { name: VNC_PASSWORD, from: generated-password }
-      writablePaths: [/tmp]
-  # HOME of the container: Wine prefix and MATLAB.
-  storage: { size: 20Gi, mountPath: /home/wine }
-# The installer and the MathWorks activation need the internet, so it is on by default.
+vm:
+  cpuCores: 4
+  memoryGiB: 8
+  # Disk-Klon vom Golden-Image (Cinder, ~90 GiB)
+  diskGiB: 90
+  imageRef: windows11-matlab-golden
+  storageClass: cinder
+  vncAccess: true
 egress: internet
-# Expert settings the person deploying may switch (wizard, "Experteneinstellungen"):
-#   internet   - off only makes sense for a volume that already has MATLAB installed and activated
-#   podNetwork - the pods of one deployment (one per person) may reach each other on port 8080
-podNetwork: none
-userChoices:
-  internet: true
-  podNetwork: true
 access:
   - { type: url, template: "https://{workload}-{deployment}.{domain}" }
   - { type: password, from: generated-password, username: "{user}" }
