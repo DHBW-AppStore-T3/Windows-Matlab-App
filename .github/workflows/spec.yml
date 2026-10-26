@@ -1,0 +1,16 @@
+# Checks appstore.yaml against the app contract v2 (central check of DHBW-AppStore-T3/app-registry). A kubevirt-vm
+# app has no container image, so nothing is built here: the VM clones the golden image (see README).
+name: spec
+on:
+  push:
+    branches: [main]
+    paths: ["appstore.yaml", ".github/workflows/spec.yml"]
+  pull_request:
+    paths: ["appstore.yaml", ".github/workflows/spec.yml"]
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  spec:
+    uses: DHBW-AppStore-T3/app-registry/.github/workflows/validate-spec.yml@v1

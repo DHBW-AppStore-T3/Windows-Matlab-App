@@ -1,6 +1,0 @@
-# The image is built from Debian packages and an upstream tarball on purpose.
-ignored:
-  - DL3008   # pin apt package versions: the base image's snapshot is the pin
-  - DL3009   # keep apt lists: removed in the same RUN
-  - DL3015   # --no-install-recommends is set where it matters
-  - DL4006   # pipefail: the pipes here are checked by sha256sum -c
