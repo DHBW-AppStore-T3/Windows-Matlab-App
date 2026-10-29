@@ -6,7 +6,7 @@ Windows 11 mit MATLAB R2024b im Browser, als KubeVirt-VM für den DHBW AppStore:
 ## Wie es funktioniert
 
 - `appstore.yaml` (App-Vertrag v2, `runtime: kubevirt-vm`) beschreibt die VM: Vorgabe 4 vCPU, 8 GiB RAM, 90 GiB
-  Platte; im Wizard wählbar 2-8 vCPU und 4-16 GiB (`vm.bounds`), dazu Internet- und Pod-Netz-Zugang (`userChoices`).
+  Platte; im Wizard wählbar 2-8 vCPU und 4-16 GiB (`vm.bounds`), dazu Internet (startet an: die Lizenz des MathWorks-Kontos wird online geprüft) und Pod-Netz (startet aus) als Wahl (`network`).
 - Jede VM klont das Golden-Image `windows11-matlab-golden` (MATLAB vorinstalliert), eine Cinder-PVC im Namespace
   `vm-poc`. Angelegt wird sie mit `scripts/migrate-golden-image.sh` im Repo `deployment` (vorher
   `scripts/install-cinder-csi.sh`).
