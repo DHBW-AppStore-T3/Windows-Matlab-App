@@ -17,8 +17,13 @@ vm:
   bounds:
     cpuCores: { min: 2, max: 8 }
     memoryGiB: { min: 4, max: 16 }
-egress: internet
-userChoices: { internet: true, podNetwork: true }
+# What the desktops may reach (the contract: app-registry README, "network"). MATLAB's named-user licence (the MathWorks
+# account) is activated and checked online, and the desktop updates itself: it starts on. A teacher can switch it off
+# for a course that only works in an already activated desktop (an exam). The desktops of one deployment may reach each
+# other (all ports) only if chosen: off by default.
+network:
+  internet: { allowed: true, default: true }
+  podNetwork: { allowed: true, default: false }
 access:
   - { type: url, template: "https://{workload}-{deployment}.{domain}" }
   - { type: password, from: generated-password, username: "{user}" }
